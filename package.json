@@ -14,6 +14,7 @@
     "request": "~2.25.0",
     "xml2js": "~0.2.8",
     "node-phantom": "*",
+    "phantomjs": "*",
     "async": "*"
   },
   "devDependencies": {
@@ -21,6 +22,7 @@
     "request": "~2.25.0",
     "xml2js": "~0.2.8",
     "node-phantom": "*",
+    "phantomjs": "*",
     "async": "*"
   }
 }
