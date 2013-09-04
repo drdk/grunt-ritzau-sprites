@@ -2,7 +2,7 @@ XMLHttpRequest = require('w3c-xmlhttprequest').XMLHttpRequest
 fs             = require('fs')
 parseXml       = require('xml2js').parseString
 http           = require('http')
-phantom        = require("phantom")
+phantom        = require("node-phantom")
 
 red    = '\u001b[31m'
 blue   = '\u001b[34m'
@@ -70,7 +70,14 @@ class SpriteGenerator
             @grunt.log.error "Could not connect to EPG. Check intranet connectivity."
             @grunt.errorCount++
           else
-            this.epgRequest()
+            fs.readdir @options.files.logos, (error, list) =>
+                for file in list
+                    file = "#{@options.files.logos}/#{file}"
+                    stat = fs.statSync(file)
+                    if not stat.isDirectory()
+                        fs.unlink(file)
+
+                this.epgRequest()
 
     ########################################################################################################################
     ### EPG
@@ -157,11 +164,22 @@ class SpriteGenerator
             for image in channel.images
                 html += """<img src="#{image.filename}" data-ident="#{channel.ident}" />"""
 
-        temp = "#{__dirname}/temp.html"
-        ws   = fs.createWriteStream(temp)
+        @temp = "#{__dirname}/temp.html"
+        ws   = fs.createWriteStream(@temp)
         ws.write(html)
         ws.close()
 
+
+        phantom.create this.phantomCreated, parameters:
+            "local-to-remote-url-access": "yes"
+
+        #phantom.create "--local-to-remote-url-access=yes", (ph) =>
+        #    @phantom = ph
+        #    ph.createPage (page) =>
+        #        page.open temp, (status) =>
+        #            page.evaluate fn, this.pageResult
+
+    phantomCreated: (error, ph) =>
         params = 
             channels:       @channels
             cssTemplate:    @cssTemplate
@@ -169,12 +187,12 @@ class SpriteGenerator
             filenamePrefix: @options.css.logoPrefix
 
         fn = "function() { return (#{evaluation.toString()}).apply(this, #{JSON.stringify([params])});}"
+        #console.log fn
 
-        phantom.create "--local-to-remote-url-access=yes", (ph) =>
-            @phantom = ph
-            ph.createPage (page) =>
-                page.open temp, (status) =>
-                    page.evaluate fn, this.pageResult
+        @phantom = ph
+        ph.createPage (error, page) =>
+            page.open @temp, (error, status) =>
+                page.evaluate fn, this.pageResult
 
     ########################################################################################################################
     ### Phantom
@@ -186,8 +204,14 @@ class SpriteGenerator
             @grunt.log.ok "Finished in #{end-@start}ms"
             @done()
 
-    pageResult: (result) =>
+    pageResult: (error, result) =>
+        if error
+            grunt.errorCount++
+            grunt.log.error "Fatal error:", error
+            return
+
         @phantom.exit()
+        fs.unlink(@temp)
 
         for filename in result.images
             fs.renameSync(filename, filename.replace(/\-temp\d\./gi, "."))

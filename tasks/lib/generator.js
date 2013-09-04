@@ -95,7 +95,7 @@ parseXml = require('xml2js').parseString;
 
 http = require('http');
 
-phantom = require("phantom");
+phantom = require("node-phantom");
 
 red = '\u001b[31m';
 
@@ -129,6 +129,7 @@ SpriteGenerator = (function() {
   function SpriteGenerator(epgFeedUrl, options) {
     this.pageResult = __bind(this.pageResult, this);
     this.didWrite = __bind(this.didWrite, this);
+    this.phantomCreated = __bind(this.phantomCreated, this);
     this.epgRequestCallback = __bind(this.epgRequestCallback, this);
     var host,
       _this = this;
@@ -145,7 +146,18 @@ SpriteGenerator = (function() {
         _this.grunt.log.error("Could not connect to EPG. Check intranet connectivity.");
         return _this.grunt.errorCount++;
       } else {
-        return _this.epgRequest();
+        return fs.readdir(_this.options.files.logos, function(error, list) {
+          var file, stat, _i, _len;
+          for (_i = 0, _len = list.length; _i < _len; _i++) {
+            file = list[_i];
+            file = "" + _this.options.files.logos + "/" + file;
+            stat = fs.statSync(file);
+            if (!stat.isDirectory()) {
+              fs.unlink(file);
+            }
+          }
+          return _this.epgRequest();
+        });
       }
     });
   }
@@ -263,8 +275,7 @@ SpriteGenerator = (function() {
   };
 
   SpriteGenerator.prototype.generateSprite = function() {
-    var channel, fn, html, image, params, temp, ws, _i, _j, _len, _len1, _ref, _ref1,
-      _this = this;
+    var channel, html, image, ws, _i, _j, _len, _len1, _ref, _ref1;
     html = "<canvas id=\"sprite\"></canvas>";
     _ref = this.channels;
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -278,10 +289,20 @@ SpriteGenerator = (function() {
         html += "<img src=\"" + image.filename + "\" data-ident=\"" + channel.ident + "\" />";
       }
     }
-    temp = "" + __dirname + "/temp.html";
-    ws = fs.createWriteStream(temp);
+    this.temp = "" + __dirname + "/temp.html";
+    ws = fs.createWriteStream(this.temp);
     ws.write(html);
     ws.close();
+    return phantom.create(this.phantomCreated, {
+      parameters: {
+        "local-to-remote-url-access": "yes"
+      }
+    });
+  };
+
+  SpriteGenerator.prototype.phantomCreated = function(error, ph) {
+    var fn, params,
+      _this = this;
     params = {
       channels: this.channels,
       cssTemplate: this.cssTemplate,
@@ -289,12 +310,10 @@ SpriteGenerator = (function() {
       filenamePrefix: this.options.css.logoPrefix
     };
     fn = "function() { return (" + (evaluation.toString()) + ").apply(this, " + (JSON.stringify([params])) + ");}";
-    return phantom.create("--local-to-remote-url-access=yes", function(ph) {
-      _this.phantom = ph;
-      return ph.createPage(function(page) {
-        return page.open(temp, function(status) {
-          return page.evaluate(fn, _this.pageResult);
-        });
+    this.phantom = ph;
+    return ph.createPage(function(error, page) {
+      return page.open(_this.temp, function(error, status) {
+        return page.evaluate(fn, _this.pageResult);
       });
     });
   };
@@ -312,10 +331,16 @@ SpriteGenerator = (function() {
     }
   };
 
-  SpriteGenerator.prototype.pageResult = function(result) {
+  SpriteGenerator.prototype.pageResult = function(error, result) {
     var buffer, css, filename, _i, _len, _ref,
       _this = this;
+    if (error) {
+      grunt.errorCount++;
+      grunt.log.error("Fatal error:", error);
+      return;
+    }
     this.phantom.exit();
+    fs.unlink(this.temp);
     _ref = result.images;
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       filename = _ref[_i];
