@@ -1,9 +1,11 @@
 evaluation = (options) ->
+    options = JSON.parse(options)
     cssTemplate    = options.cssTemplate
     channels       = options.channels
     logoPath       = options.logoPath
     filenamePrefix = options.filenamePrefix
     moo = []
+
 
     String::replaceObject = (obj) ->
         result = this
@@ -72,4 +74,4 @@ evaluation = (options) ->
         height: height
         images: imgs
 
-    return result
+    return JSON.stringify(result)

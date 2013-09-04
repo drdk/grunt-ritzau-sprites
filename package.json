@@ -4,7 +4,8 @@
   "description": "Generates sprite and stylesheet for use at dr.dk",
   "main": "generator.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "preinstall": "npm install -g phantomjs"
   },
   "author": "Nicolai Persson <nimp@dr.dk>",
   "license": "BSD",
@@ -13,16 +14,14 @@
     "w3c-xmlhttprequest": "~1.0.0",
     "request": "~2.25.0",
     "xml2js": "~0.2.8",
-    "node-phantom": "*",
-    "phantomjs": "*",
+    "phantom-proxy": "*",
     "async": "*"
   },
   "devDependencies": {
     "w3c-xmlhttprequest": "~1.0.0",
     "request": "~2.25.0",
     "xml2js": "~0.2.8",
-    "node-phantom": "*",
-    "phantomjs": "*",
+    "phantom-proxy": "*",
     "async": "*"
   }
 }

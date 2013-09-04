@@ -2,7 +2,6 @@ XMLHttpRequest = require('w3c-xmlhttprequest').XMLHttpRequest
 fs             = require('fs')
 parseXml       = require('xml2js').parseString
 http           = require('http')
-phantom        = require("node-phantom")
 
 red    = '\u001b[31m'
 blue   = '\u001b[34m'
@@ -169,9 +168,27 @@ class SpriteGenerator
         ws.write(html)
         ws.close()
 
+        params =
+            localToRemoteUrlAccess: "yes"
 
-        phantom.create this.phantomCreated, parameters:
-            "local-to-remote-url-access": "yes"
+        require('phantom-proxy').create params, (proxy) =>
+            @phantom = proxy.phantom
+            @page    = proxy.page
+
+            params = 
+                channels:       @channels
+                cssTemplate:    @cssTemplate
+                logoPath:       @options.css.logoPath
+                filenamePrefix: @options.css.logoPrefix
+            
+            fn = "function() { return (#{evaluation.toString()}).apply(this, #{JSON.stringify([params])});}"
+
+            @page.open @temp, =>
+                @page.evaluate evaluation, this.pageResult, JSON.stringify(params)
+
+
+        #phantom.create this.phantomCreated, parameters:
+        #    "local-to-remote-url-access": "yes"
 
         #phantom.create "--local-to-remote-url-access=yes", (ph) =>
         #    @phantom = ph
@@ -204,12 +221,8 @@ class SpriteGenerator
             @grunt.log.ok "Finished in #{end-@start}ms"
             @done()
 
-    pageResult: (error, result) =>
-        if error
-            grunt.errorCount++
-            grunt.log.error "Fatal error:", error
-            return
-
+    pageResult: (result) =>
+        result = JSON.parse(result)
         @phantom.exit()
         fs.unlink(@temp)
 
