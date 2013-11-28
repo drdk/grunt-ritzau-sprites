@@ -2,92 +2,6 @@
 var SpriteGenerator, XMLHttpRequest, blue, cyan, evaluation, fs, http, parseXml, red, reset, under,
   __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
-evaluation = function(options) {
-  var canvas, channel, channels, css, cssTemplate, ctx, filenamePrefix, height, image, imgs, largestImageWithIdent, logoPath, moo, offset, result, width, _i, _j, _len, _len1;
-  options = JSON.parse(options);
-  cssTemplate = options.cssTemplate;
-  channels = options.channels;
-  logoPath = options.logoPath;
-  filenamePrefix = options.filenamePrefix;
-  moo = [];
-  String.prototype.replaceObject = function(obj) {
-    var key, re, result;
-    result = this;
-    for (key in obj) {
-      re = new RegExp("{" + key + "}", "g");
-      result = result.replace(re, obj[key]);
-    }
-    return result;
-  };
-  largestImageWithIdent = function(ident) {
-    var image, images, maxWidth, result, _i, _len;
-    maxWidth = 0;
-    images = document.querySelectorAll("img");
-    result = null;
-    for (_i = 0, _len = images.length; _i < _len; _i++) {
-      image = images[_i];
-      if (image.getAttribute("data-ident") !== ident) {
-        continue;
-      }
-      if (image.width > maxWidth) {
-        maxWidth = image.width;
-        result = image;
-      }
-    }
-    return result;
-  };
-  width = 0;
-  height = 0;
-  css = "";
-  imgs = [];
-  for (_i = 0, _len = channels.length; _i < _len; _i++) {
-    channel = channels[_i];
-    image = largestImageWithIdent(channel.ident);
-    if (image) {
-      if (!(image.height >= 30)) {
-        moo.push(channel.ident);
-      }
-      channel.spriteImage = image;
-      if (!(width >= image.width)) {
-        width = image.width;
-      }
-      height += image.height;
-    }
-  }
-  canvas = document.getElementById("sprite");
-  ctx = canvas.getContext("2d");
-  canvas.width = width;
-  canvas.height = height;
-  offset = 0;
-  for (_j = 0, _len1 = channels.length; _j < _len1; _j++) {
-    channel = channels[_j];
-    if (!channel.spriteImage) {
-      continue;
-    }
-    ctx.drawImage(channel.spriteImage, 0, offset);
-    imgs.push(channel.spriteImage.src.replace("file://", ""));
-    offset += channel.spriteImage.height;
-    css += "\n\n" + cssTemplate.replaceObject({
-      name: "" + filenamePrefix + "-" + channel.ident,
-      width: channel.spriteImage.width,
-      height: channel.spriteImage.height,
-      pos: offset - channel.spriteImage.height,
-      logoName: "" + filenamePrefix + "-" + channel.ident + ".png",
-      logoPath: logoPath
-    });
-  }
-  result = {
-    sprite: JSON.stringify(canvas.toDataURL({
-      format: "png"
-    })),
-    css: css,
-    width: width,
-    height: height,
-    images: imgs
-  };
-  return JSON.stringify(result);
-};
-
 XMLHttpRequest = require('w3c-xmlhttprequest').XMLHttpRequest;
 
 fs = require('fs');
@@ -128,7 +42,7 @@ SpriteGenerator = (function() {
   function SpriteGenerator(epgFeedUrl, options) {
     this.pageResult = __bind(this.pageResult, this);
     this.didWrite = __bind(this.didWrite, this);
-    this.phantomCreated = __bind(this.phantomCreated, this);
+    //this.phantomCreated = __bind(this.phantomCreated, this);
     this.epgRequestCallback = __bind(this.epgRequestCallback, this);
     var host,
       _this = this;
@@ -248,7 +162,7 @@ SpriteGenerator = (function() {
       }).call(this));
     }
     return _results;
-  };
+  }; 
 
   SpriteGenerator.prototype.downloadImages = function(channel, url, i) {
     var filename,
@@ -258,13 +172,14 @@ SpriteGenerator = (function() {
       if (!(response.statusCode >= 200 && response.statusCode < 400)) {
         _this.grunt.log.warn("Failed to download sprite " + cyan + url + reset + " " + under + "(" + channel.ident + ")" + reset + " -- Status code: " + response.statusCode);
       }
-      return response.pipe(fs.createWriteStream(filename)).on("close", function() {
+      response.pipe(fs.createWriteStream(filename)).on("close", function() {
         _this.downloadedImages++;
         channel.images.push({
           filename: filename,
           url: url,
           dimensions: null,
-          dimensionSum: 0
+          dimensionSum: 0,
+          failed: (response.statusCode >= 200 && response.statusCode < 400)
         });
         if (_this.downloadedImages === _this.totalImages) {
           return _this.generateSprite();
@@ -275,8 +190,28 @@ SpriteGenerator = (function() {
 
   SpriteGenerator.prototype.generateSprite = function() {
     var channel, html, image, params, ws, _i, _j, _len, _len1, _ref, _ref1,
-      _this = this;
-    html = "<canvas id=\"sprite\"></canvas>";
+      phantomjs = require("phantomjs").path,
+      exec = require("child_process").exec,
+      path = require("path"),
+      _this = this,
+      options = {
+        channels: _this.channels,
+        cssTemplate: _this.cssTemplate,
+        logoPath: _this.options.css.logoPath,
+        filenamePrefix: _this.options.css.logoPrefix
+      };
+    html = "\
+      <style>\
+        * {\
+          padding: 0;\
+          margin: 0;\
+        }\
+      </style>\
+      <script>\
+        var options = " + JSON.stringify(options) + ";\
+      </script>\
+      <canvas id=\"sprite\"></canvas>\
+      ";
     _ref = this.channels;
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       channel = _ref[_i];
@@ -286,53 +221,42 @@ SpriteGenerator = (function() {
       _ref1 = channel.images;
       for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
         image = _ref1[_j];
-        html += "<img src=\"" + image.filename + "\" data-ident=\"" + channel.ident + "\" />";
+        var file = path.relative(__dirname, image.filename);
+        html += "<img src=\"" + file.replace(/\\/g, "/") + "\" data-ident=\"" + channel.ident + "\" />";
       }
     }
-    this.temp = "" + __dirname + "/temp.html";
+    html += "<script src=\"phantom-page-script.js\"></script>";
+    this.temp = ("" + __dirname + "/temp.html").replace(/\\/g, "/");
     ws = fs.createWriteStream(this.temp);
     ws.write(html);
     ws.close();
+    /*
     params = {
       localToRemoteUrlAccess: "yes"
     };
-    return require('phantom-proxy').create(params, function(proxy) {
-      var fn;
-      _this.phantom = proxy.phantom;
-      _this.page = proxy.page;
-      params = {
-        channels: _this.channels,
-        cssTemplate: _this.cssTemplate,
-        logoPath: _this.options.css.logoPath,
-        filenamePrefix: _this.options.css.logoPrefix
-      };
-      fn = "function() { return (" + (evaluation.toString()) + ").apply(this, " + (JSON.stringify([params])) + ");}";
-      return _this.page.open(_this.temp, function() {
-        return _this.page.evaluate(evaluation, _this.pageResult, JSON.stringify(params));
-      });
-    });
-  };
+    */
 
-  SpriteGenerator.prototype.phantomCreated = function(error, ph) {
-    var fn, params,
-      _this = this;
-    params = {
-      channels: this.channels,
-      cssTemplate: this.cssTemplate,
-      logoPath: this.options.css.logoPath,
-      filenamePrefix: this.options.css.logoPrefix
-    };
-    fn = "function() { return (" + (evaluation.toString()) + ").apply(this, " + (JSON.stringify([params])) + ");}";
-    this.phantom = ph;
-    return ph.createPage(function(error, page) {
-      return page.open(_this.temp, function(error, status) {
-        return page.evaluate(fn, _this.pageResult);
-      });
-    });
-  };
+    var script = path.join(__dirname, "phantom-script.js"),
+      args = [phantomjs, script, this.temp, this.options.files.sprite].join(" ");
 
-  /* Phantom
-  */
+    var pjs = exec(args, {
+        cwd: __dirname,
+        //timeout: 5000,
+        maxBuffer: 5000*1024 // png data gets quite large
+      }, function (error, stdout, stderr) {
+      if (error) {
+        console.error("Error", error);
+      }
+      else if (stderr) {
+        console.error("Stderr", stderr);
+      }
+      else if (stdout) {
+        _this.pageResult(stdout);
+      }
+    });
+
+    return ;
+  };
 
 
   SpriteGenerator.prototype.didWrite = function(error) {
@@ -348,13 +272,14 @@ SpriteGenerator = (function() {
     var buffer, css, filename, _i, _len, _ref,
       _this = this;
     result = JSON.parse(result);
-    this.phantom.exit();
+    //his.phantom.exit();
     fs.unlink(this.temp);
     _ref = result.images;
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       filename = _ref[_i];
       fs.renameSync(filename, filename.replace(/\-temp\d\./gi, "."));
     }
+    this.jobs = 2;
     fs.readdir(this.options.files.logos, function(error, list) {
       var file, stat, _j, _len1;
       for (_j = 0, _len1 = list.length; _j < _len1; _j++) {
@@ -370,10 +295,7 @@ SpriteGenerator = (function() {
       }
       return _this.didWrite();
     });
-    this.jobs = 3;
-    buffer = result.sprite.substring(1, result.sprite.length - 2);
-    buffer = buffer.replace(/^data:image\/png;base64,/, "");
-    fs.writeFile(this.options.files.sprite, buffer, 'base64', this.didWrite);
+
     css = this.cssFooterTemplate.replaceObject({
       spriteUrl: this.options.css.spritePath,
       prefix: this.options.css.logoPrefix
