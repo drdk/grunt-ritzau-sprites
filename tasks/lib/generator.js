@@ -113,7 +113,7 @@ SpriteGenerator = (function() {
 		this.parsedImages = 0;
 		this.totalImages = 0;
 		this.channels = this.channels.filter(function (channel) {
-			return channel.type == "tv" && channel.dr_channel != "TRUE" && channel.www_url != "http://www.dr.dk" && channel.name[0].indexOf("DR ") != 0;
+			return channel.dr_channel != "TRUE" && channel.www_url != "http://www.dr.dk" && channel.name[0].indexOf("DR ") != 0;
 		});
 		this.channels.sort(function (a, b) {
 			if (a.name > b.name) {
@@ -132,12 +132,7 @@ SpriteGenerator = (function() {
 			["logo_16", "logo_32", "logo_50"].forEach(function (prop) {
 				var logo = channel[prop];
 				if (logo) {
-				 	if (logo.toString().match(/\.(?:gif|png|jpe?g)$/)) {
-						channel.imageUrls.push(logo.toString());
-					}
-					else {
-						console.log("Invalid image extension for " + cyan + channel.name + reset + " " + under + "(" + channel.ident + ")" + reset + " - skipping");
-					}
+					channel.imageUrls.push(logo.toString());
 				}
 			});
 			_this.totalImages += channel.imageUrls.length;
