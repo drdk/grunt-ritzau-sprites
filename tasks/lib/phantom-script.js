@@ -21,10 +21,13 @@ var url = system.args[1],
 page.onCallback = function (response) {
 
 	var size = page.evaluate(function () {
-		return {width: sprite.offsetWidth, height: sprite.offsetHeight};
+		return {width: sprite.width, height: sprite.height};
 	});
 
 	page.viewportSize = size;
+	size.top = 0;
+	size.left = 0;
+	phantom.clipRect = size;
 
 	page.render(output);
 	page.close();

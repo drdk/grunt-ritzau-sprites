@@ -113,7 +113,17 @@ SpriteGenerator = (function() {
 		this.parsedImages = 0;
 		this.totalImages = 0;
 		this.channels = this.channels.filter(function (channel) {
-			return channel.dr_channel != "TRUE" && channel.www_url != "http://www.dr.dk" && channel.name[0].indexOf("DR ") != 0;
+			return channel.type == "tv" && channel.dr_channel != "TRUE" && channel.www_url != "http://www.dr.dk" && channel.name[0].indexOf("DR ") != 0;
+		});
+		this.channels.sort(function (a, b) {
+			if (a.name > b.name) {
+				return 1;
+			}
+			if (a.name < b.name) {
+				return -1;
+			}
+			// a must be equal to b
+			return 0;
 		});
 		this.channels.forEach(function (channel) {
 			channel.ident = channel.source_url.toString().split("/").pop().toLowerCase();

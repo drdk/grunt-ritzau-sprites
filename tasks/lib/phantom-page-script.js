@@ -40,7 +40,8 @@ function makeSprite () {
 		maxWidth = 110,
 		maxHeight = 35,
 		minWidth = 40,
-		minHeight = 20;
+		minHeight = 20,
+		idealRatio = maxHeight / maxWidth;
 
 	moo = [];
 
@@ -58,18 +59,27 @@ function makeSprite () {
 	};
 
 	function getSize (image) {
-		var wfactor = maxWidth / image.width,
-			yfactor = maxHeight / image.height,
-			factor = Math.min(wfactor, yfactor);
+		var size = {
+				width: image.width,
+				height: image.height
+			},
+			ratio = image.height / image.width;
 
-		if (image.width < minWidth && image.height < minHeight) {
-			factor = 2;
+		if (size.width > maxWidth || size.height > maxHeight) {
+			if (ratio > idealRatio) {
+				size.height = maxHeight;
+				size.width = Math.round(maxHeight / ratio);
+			}
+			else {
+				size.width = maxWidth;
+				size.height = Math.round(maxWidth * ratio);
+			}
 		}
-
-		return {
-			width: Math.ceil(image.width * factor),
-			height: Math.ceil(image.height * factor)
-		};
+		else if (size.width < minWidth && size.height < minHeight) {
+			size.width *= 2;
+			size.height *= 2;
+		}
+		return size;
 	}
 
 	width = 0;
