@@ -1,49 +1,21 @@
-window.onload = function () {
-
-	var images = $(document.images),
-		count = images.length;
-	
-	images.forEach(function (image) {
-		if (image.complete) {
-			countDown();
-		}
-		else {
-			image.onload = countDown;
-		}
-	});
-	
-	function countDown() {
-		count--;
-		if (!count) {
-			makeSprite();
-		}
-	}
-
-};
+window.onload = makeSprite;
 
 function $ (selector) {
 	return Array.prototype.slice.call((typeof selector == "string") ? document.querySelectorAll(selector) : selector, 0);
 }
 
-String.prototype.replaceToken = function(object) {
-	return this.replace(/\{([a-zA-Z]+)\}/g, function (m, key) {
-		return (key in object) ? object[key] : m;
-	});
-};
-
 function makeSprite () {
-	var canvas, css, ctx, height, imgs, largestImageWithIdent, moo, offset, result, width,
-		cssTemplate = options.cssTemplate,
+	var canvas, ctx, largestImageWithIdent,
 		channels = options.channels,
-		logoPath = options.logoPath,
-		filenamePrefix = options.filenamePrefix,
 		maxWidth = 110,
 		maxHeight = 35,
 		minWidth = 40,
 		minHeight = 20,
-		idealRatio = maxHeight / maxWidth;
-
-	moo = [];
+		width = 0,
+		height = 0,
+		offset = 0,
+		idealRatio = maxHeight / maxWidth,
+		result = [];
 
 	largestImageWithIdent = function(ident) {
 		var images = $("img[data-ident='" + ident + "']"),
@@ -84,15 +56,10 @@ function makeSprite () {
 
 	width = 0;
 	height = 0;
-	css = "";
-	imgs = [];
 
 	channels.forEach(function (channel) {
 		var image = largestImageWithIdent(channel.ident);
 		if (image) {
-			if (image.height < 30) {
-				moo.push(channel.ident);
-			}
 			channel.spriteImage = image;
 			channel.size = getSize(image);
 			if (width < channel.size.width) {
@@ -112,33 +79,18 @@ function makeSprite () {
 		if (channel.spriteImage) {
 			try {
 				ctx.drawImage(channel.spriteImage, 0, offset, channel.size.width, channel.size.height);
-				imgs.push(channel.spriteImage.src.replace("file://", ""));
-				offset += channel.size.height;
-				css += "\n\n" + cssTemplate.replaceToken({
-					name: "" + filenamePrefix + "-" + channel.ident,
+				result.push({
+					id: channel.ident,
 					width: channel.size.width,
 					height: channel.size.height,
-					pos: offset - channel.size.height,
-					logoName: "" + filenamePrefix + "-" + channel.ident + ".png",
-					logoPath: logoPath
+					top: offset
 				});
+				offset += channel.size.height;
 			}
 			catch (e) {
 			}
 		}
 	});
-
-	var images = Array.prototype.slice.call(document.images, 0);
-	images.forEach(function (image) {
-		image.parentNode.removeChild(image);
-	});
-
-	result = {
-		css: css,
-		width: width,
-		height: height,
-		images: imgs
-	};
 	
 	result = JSON.stringify(result);
 

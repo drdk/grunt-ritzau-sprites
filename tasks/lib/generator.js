@@ -154,36 +154,9 @@ SpriteGenerator = (function() {
 		this.channels.filter(function(channel) {
 			return channel.imageUrls && channel.imageUrls.length > 0;
 		}).forEach(function (channel) {
-			channel.imageUrls.forEach(function (url, index) {
-				_this.downloadImages(channel, url, index);
-			});
+			channel.images = channel.imageUrls.slice(0);
 		});
-	};
-
-	SpriteGenerator.prototype.downloadImages = function(channel, url, i) {
-		var _this = this,
-			http = require('http'),
-			suffix = url.replace(/^.*?(\.[a-z]+|)$/, "$1"),
-			filename = "" + this.options.files.logos + "/" + this.options.files.logoPrefix + "-" + channel.ident + "-temp" + i + (suffix || ".png");
-		
-		http.get(url, function(response) {
-			if (!(response.statusCode >= 200 && response.statusCode < 400)) {	
-				console.log("Failed to download sprite " + cyan + url + reset + " " + under + "(" + channel.ident + ")" + reset + " -- Status code: " + response.statusCode);
-				filename += ".404.png";
-			}
-			response.pipe(fs.createWriteStream(filename)).on("close", function() {
-				_this.totalImages--;
-				channel.images.push({
-					filename: filename,
-					url: url,
-					dimensions: null,
-					dimensionSum: 0
-				});
-				if (!_this.totalImages) {
-					_this.generateSprite();
-				}
-			});
-		});
+		this.generateSprite();
 	};
 
 	SpriteGenerator.prototype.generateSprite = function() {
@@ -193,10 +166,7 @@ SpriteGenerator = (function() {
 			path = require("path"),
 			_this = this,
 			options = {
-				channels: _this.channels,
-				cssTemplate: cssTemplate,
-				logoPath: _this.options.css.logoPath,
-				filenamePrefix: _this.options.css.logoPrefix
+				channels: _this.channels
 			};
 
 		html = "\
@@ -204,6 +174,9 @@ SpriteGenerator = (function() {
 	* {\
 		padding: 0;\
 		margin: 0;\
+	}\
+	img {\
+		display: none;\
 	}\
 </style>\
 <script>\
@@ -213,10 +186,9 @@ SpriteGenerator = (function() {
 
 
 		this.channels.forEach(function (channel) {
-			if (channel.imageUrls && channel.imageUrls.length > 0) {
-				channel.images.forEach(function (image) {
-					var file = path.relative(__dirname, image.filename);
-					html += "<img src=\"" + file.replace(/\\/g, "/") + "\" data-ident=\"" + channel.ident + "\" />";
+			if (channel.images && channel.images.length > 0) {
+				channel.images.forEach(function (url) {
+					html += "<img src=\"" + url + "\" data-ident=\"" + channel.ident + "\" />";
 				});
 			}
 		});
@@ -226,7 +198,9 @@ SpriteGenerator = (function() {
 		fs.writeFileSync(this.temp, html);
 
 		var script = path.join(__dirname, "phantom-script.js"),
-			args = [phantomjs, script, this.temp, this.options.files.sprite].join(" ");
+			args = [phantomjs, script, this.temp, this.options.files.sprite, _this.options.files.logos + "/" + this.options.css.logoPrefix + "-{id}.png"].join(" ");
+
+		fs.writeFileSync("args.txt", args);
 
 		var pjs = exec(args, {
 				cwd: __dirname,
@@ -247,31 +221,27 @@ SpriteGenerator = (function() {
 
 
 	SpriteGenerator.prototype.didWrite = function(error) {
-		if (--this.jobs === 0) {
-			this.grunt.log.ok("Finished in " + (+new Date() - this.start) + "ms");
-			this.done();
-		}
+		this.grunt.log.ok("Finished in " + (+new Date() - this.start) + "ms");
+		this.done();
 	};
 
 	SpriteGenerator.prototype.pageResult = function(result) {
 		var _this = this, css;
 		result = JSON.parse(result);
 		fs.unlink(this.temp);
-		result.images.forEach(function(filename) {
-			fs.renameSync(filename, filename.replace(/\-temp\d\./gi, "."));
-		});
-		this.jobs = 2;
-		fs.readdir(this.options.files.logos, function(error, list) {
-			list.forEach(function(file) {
-				if (file.lastIndexOf("temp") > -1) {
-					file = "" + _this.options.files.logos + "/" + file;
-					stat = fs.statSync(file);
-					if (!stat.isDirectory()) {
-						fs.unlink(file);
-					}
-				}
+
+		var filenamePrefix = _this.options.css.logoPrefix,
+			logoPath = _this.options.css.logoPath;
+
+		result.forEach(function (logo) {
+			css += "\n\n" + cssTemplate.replaceToken({
+				name: "" + filenamePrefix + "-" + logo.id,
+				width: logo.width,
+				height: logo.height,
+				pos: logo.top,
+				logoName: "" + filenamePrefix + "-" + logo.id + ".png",
+				logoPath: logoPath
 			});
-			_this.didWrite();
 		});
 
 		css = cssFooterTemplate.replaceToken({
