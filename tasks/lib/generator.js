@@ -97,7 +97,7 @@ SpriteGenerator = (function() {
 		data = this.client.response;
 		parseXml(data, function(error, result) {
 			if ((result != null) && result instanceof Object) {
-				fs.writeFileSync("json-data.json", JSON.stringify(result));
+				//fs.writeFileSync("json-data.json", JSON.stringify(result));
 				_this.channels = result["m_lcha:message"].channels.pop().channel;
 				_this.parseChannels();
 			}
@@ -195,8 +195,6 @@ SpriteGenerator = (function() {
 		var script = path.join(__dirname, "phantom-script.js"),
 			args = [phantomjs, script, this.temp, this.options.files.sprite, _this.options.files.logos + "/" + this.options.css.logoPrefix + "-{id}.png"].join(" ");
 
-		fs.writeFileSync("args.txt", args);
-
 		var pjs = exec(args, {
 				cwd: __dirname,
 				//timeout: 5000,
@@ -228,6 +226,11 @@ SpriteGenerator = (function() {
 		var filenamePrefix = _this.options.css.logoPrefix,
 			logoPath = _this.options.css.logoPath;
 
+		css = cssFooterTemplate.replaceToken({
+			spriteUrl: this.options.css.spritePath,
+			prefix: this.options.css.logoPrefix
+		});
+
 		result.forEach(function (logo) {
 			css += "\n\n" + cssTemplate.replaceToken({
 				name: "" + filenamePrefix + "-" + logo.id,
@@ -239,11 +242,6 @@ SpriteGenerator = (function() {
 			});
 		});
 
-		css = cssFooterTemplate.replaceToken({
-			spriteUrl: this.options.css.spritePath,
-			prefix: this.options.css.logoPrefix
-		});
-		css += result.css;
 		fs.writeFile(this.options.files.stylesheet, css, this.didWrite);
 	};
 
