@@ -113,7 +113,7 @@ SpriteGenerator = (function() {
 		this.parsedImages = 0;
 		this.totalImages = 0;
 		this.channels = this.channels.filter(function (channel) {
-			return channel.dr_channel != "TRUE" && channel.www_url != "http://www.dr.dk" && channel.name[0].indexOf("DR ") != 0;
+			return channel.dr_channel != "TRUE" && !channel.name[0].match("^DR[ 1-9]");
 		});
 		this.channels.sort(function (a, b) {
 			if (a.name > b.name) {
@@ -135,6 +135,19 @@ SpriteGenerator = (function() {
 					channel.imageUrls.push(logo.toString());
 				}
 			});
+			if (_this.options.files.fallback) {
+				var filebase = _this.options.files.fallback.replace(/\//g, "\\") + "\\ritzau-logo-" + channel.ident;
+				var gif = filebase + ".gif";
+				var png = filebase + ".png";
+				if (fs.existsSync(png)) {
+					channel.imageUrls.push(png);
+				}
+				else {
+					if (fs.existsSync(gif)) {
+						channel.imageUrls.push(gif);
+					}
+				}
+			}
 			_this.totalImages += channel.imageUrls.length;
 		});
 		this.parseImages();

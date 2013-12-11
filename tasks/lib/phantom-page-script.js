@@ -14,6 +14,7 @@ function makeSprite () {
 		width = 0,
 		height = 0,
 		offset = 0,
+		unit = 5,
 		idealRatio = maxHeight / maxWidth,
 		result = [];
 
@@ -65,7 +66,7 @@ function makeSprite () {
 			if (width < channel.size.width) {
 				width = channel.size.width;
 			}
-			height += channel.size.height;
+			height += channel.size.height + unit;
 		}
 	});
 
@@ -85,7 +86,7 @@ function makeSprite () {
 					height: channel.size.height,
 					top: offset
 				});
-				offset += channel.size.height;
+				offset += channel.size.height + unit;
 			}
 			catch (e) {
 			}
