@@ -170,7 +170,7 @@ SpriteGenerator = (function() {
 	SpriteGenerator.prototype.generateSprite = function() {
 		var html, ws,
 			phantomjs = require("phantomjs").path,
-			exec = require("child_process").exec,
+			execFile = require("child_process").execFile,
 			path = require("path"),
 			_this = this,
 			options = {
@@ -206,9 +206,9 @@ SpriteGenerator = (function() {
 		fs.writeFileSync(this.temp, html);
 
 		var script = path.join(__dirname, "phantom-script.js"),
-			args = [phantomjs, script, this.temp, this.options.files.sprite, _this.options.files.logos + "/" + this.options.css.logoPrefix + "-{id}.png"].join(" ");
+			args = [script, this.temp, this.options.files.sprite, _this.options.files.logos + "/" + this.options.css.logoPrefix + "-{id}.png"];
 
-		var pjs = exec(args, {
+		var pjs = execFile(phantomjs, args, {
 				cwd: __dirname,
 				//timeout: 5000,
 				maxBuffer: 2000*1024 // png data gets quite large
