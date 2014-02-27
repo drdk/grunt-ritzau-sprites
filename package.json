@@ -4,24 +4,35 @@
   "description": "Generates sprite and stylesheet for use at dr.dk",
   "main": "generator.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "preinstall": "npm install -g phantomjs"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "Nicolai Persson <nimp@dr.dk>",
+  "author": {
+    "name": "Nicolai Persson",
+    "email": "nimp@dr.dk"
+  },
   "license": "BSD",
-  "repository": "https://github.com/drdk/grunt-ritzau-sprites.git",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/drdk/grunt-ritzau-sprites.git"
+  },
   "dependencies": {
     "w3c-xmlhttprequest": "~1.0.0",
     "request": "~2.25.0",
     "xml2js": "~0.2.8",
-    "phantom-proxy": "*",
+    "phantomjs": "*",
     "async": "*"
   },
   "devDependencies": {
-    "w3c-xmlhttprequest": "~1.0.0",
-    "request": "~2.25.0",
-    "xml2js": "~0.2.8",
-    "phantom-proxy": "*",
-    "async": "*"
-  }
+    "grunt": "*"
+  },
+  "bugs": {
+    "url": "https://github.com/drdk/grunt-ritzau-sprites/issues"
+  },
+  "readme": "ERROR: No README data found!",
+  "_id": "grunt-ritzau-sprites@0.1.0",
+  "dist": {
+    "shasum": "374f5cfeaa50a2eb8fa0a3f70da340132f2c5ccc"
+  },
+  "_resolved": "git://github.com/drdk/grunt-ritzau-sprites.git#0a6c826068c8c542577c701bbcb05108465c972d",
+  "_from": "grunt-ritzau-sprites@git://github.com/drdk/grunt-ritzau-sprites.git"
 }
