@@ -246,7 +246,7 @@ SpriteGenerator = (function() {
 
 		result.forEach(function (logo) {
 			css += "\n\n" + cssTemplate.replaceToken({
-				name: "" + filenamePrefix + "-" + logo.id,
+				name: "" + filenamePrefix + "-" + logo.id.replace(/[^-a-zA-Z0-9]/g, function (m) { return "\\" + m;}),
 				width: logo.width,
 				height: logo.height,
 				pos: logo.top,
