@@ -1,3 +1,6 @@
+var path = require("path");
+var mkdirp = require("mkdirp");
+
 var SpriteGenerator,
 	fs = require('fs'),
 	red = '\u001b[31m',
@@ -57,24 +60,25 @@ SpriteGenerator = (function() {
 		this.grunt = this.options.grunt;
 		this.grunt.log.writeln("" + under + ">>" + reset + " Generating Ritzau logos + sprite ...");
 		this.epgFeedUrl = epgFeedUrl;
-		fs.mkdir(this.options.files.logos, function(error) {});
-		host = require("url").parse(this.epgFeedUrl).hostname;
-		require('dns').lookup(host, function(error) {
-			if (error) {
-				_this.grunt.log.error("Could not connect to EPG. Check intranet connectivity.");
-				_this.grunt.errorCount++;
-			} else {
-				fs.readdir(_this.options.files.logos, function(error, list) {
-					list.forEach(function (file) {
-						file = "" + _this.options.files.logos + "/" + file;
-						stat = fs.statSync(file);
-						if (!stat.isDirectory()) {
-							fs.unlink(file);
-						}
+		mkdirp(this.options.files.logos, function(error) {
+			host = require("url").parse(_this.epgFeedUrl).hostname;
+			require('dns').lookup(host, function(error) {
+				if (error) {
+					_this.grunt.log.error("Could not connect to EPG. Check intranet connectivity.");
+					_this.grunt.errorCount++;
+				} else {
+					fs.readdir(_this.options.files.logos, function(error, list) {
+						list.forEach(function (file) {
+							file = "" + _this.options.files.logos + "/" + file;
+							stat = fs.statSync(file);
+							if (!stat.isDirectory()) {
+								fs.unlink(file);
+							}
+						});
+						_this.epgRequest();
 					});
-					_this.epgRequest();
-				});
-			}
+				}
+			});
 		});
 	}
 
@@ -255,7 +259,11 @@ SpriteGenerator = (function() {
 			});
 		});
 
-		fs.writeFile(this.options.files.stylesheet, css, this.didWrite);
+		mkdirp(path.dirname(this.options.files.stylesheet), function (error) {
+
+			fs.writeFile(_this.options.files.stylesheet, css, _this.didWrite);
+
+		});
 	};
 
 	return SpriteGenerator;
